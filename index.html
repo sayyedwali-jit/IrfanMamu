@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>iBoxWala – Receipt Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+/* ════ VARIABLES & RESET ════ */
+:root {
+  --navy:       #1a2340;
+  --navy2:      #263057;
+  --cream:      #f8f4ec;
+  --gold:       #c9a84c;
+  --gold-light: #e8d5a3;
+  --ink:        #2c2c3a;
+  --muted:      #7a7a8a;
+  --green:      #2d7a4f;
+  --red:        #b83232;
+  --border:     #d8d0c0;
+  --white:      #ffffff;
+  --shadow:     0 4px 24px rgba(26,35,64,0.10);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+
+/* ════ HEADER ════ */
+.app-header{
+  background:var(--navy);padding:16px 24px;
+  display:flex;align-items:center;gap:14px;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 16px rgba(0,0,0,0.25);
+}
+.logo-mark{
+  width:42px;height:42px;background:var(--gold);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Playfair Display',serif;font-size:19px;font-weight:900;
+  color:var(--navy);flex-shrink:0;
+}
+.brand h1{font-family:'Playfair Display',serif;font-size:21px;font-weight:900;color:#fff;line-height:1}
+.brand p{font-size:11px;color:var(--gold-light);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+
+/* ════ LAYOUT ════ */
+.container{
+  max-width:980px;margin:0 auto;padding:26px 16px 60px;
+  display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start;
+}
+@media(max-width:740px){.container{grid-template-columns:1fr}}
+
+/* ════ CARDS ════ */
+.card{background:var(--white);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px}
+.card-head{
+  background:var(--navy);padding:14px 20px;
+  display:flex;align-items:center;gap:10px;
+}
+.card-head h2{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:#fff}
+.card-head .icon{
+  width:27px;height:27px;background:rgba(201,168,76,0.2);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;font-size:13px;
+}
+.card-body{padding:20px}
+
+/* ════ FIELDS ════ */
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field label{
+  display:block;font-size:10.5px;font-weight:600;
+  text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:5px;
+}
+.field input,.field select,.field textarea{
+  width:100%;padding:9px 13px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--ink);background:var(--cream);
+  transition:border-color .2s,box-shadow .2s;outline:none;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.15);background:#fff;
+}
+.field textarea{resize:vertical;min-height:66px}
+
+/* ════ ITEM ROWS ════ */
+.item-col-heads{
+  display:grid;grid-template-columns:1fr 72px 88px 34px;
+  gap:8px;padding:0 12px;margin-bottom:4px;
+}
+.item-col-heads span{
+  font-size:9.5px;font-weight:700;letter-spacing:1.2px;
+  text-transform:uppercase;color:var(--muted);
+}
+.item-col-heads span:nth-child(2),
+.item-col-heads span:nth-child(3){text-align:right}
+
+.items-list{display:flex;flex-direction:column;gap:9px;margin-bottom:12px}
+
+.item-row{
+  display:grid;grid-template-columns:1fr 72px 88px 34px;
+  gap:8px;align-items:center;
+  background:var(--cream);border:1.5px solid var(--border);
+  border-radius:10px;padding:10px 12px;
+  transition:border-color .2s;
+}
+.item-row:hover{border-color:var(--gold-light)}
+.item-row input{
+  padding:7px 9px;border:1.5px solid var(--border);border-radius:7px;
+  font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:#fff;
+  outline:none;transition:border-color .2s;width:100%;
+}
+.item-row input:focus{border-color:var(--gold)}
+.item-row input[type=number]{text-align:right}
+.del-btn{
+  width:32px;height:32px;border:none;background:rgba(184,50,50,.1);
+  color:var(--red);border-radius:7px;cursor:pointer;font-size:18px;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s;flex-shrink:0;
+}
+.del-btn:hover{background:rgba(184,50,50,.22)}
+
+.btn-add-item{
+  width:100%;padding:9px;border:2px dashed var(--gold);
+  background:rgba(201,168,76,.06);border-radius:9px;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
+  color:var(--gold);cursor:pointer;letter-spacing:.3px;
+  transition:background .2s;
+}
+.btn-add-item:hover{background:rgba(201,168,76,.14)}
+
+/* ════ GST STRIP ════ */
+.gst-strip{
+  background:var(--cream);border:1.5px solid var(--border);
+  border-radius:10px;padding:13px 15px;margin-top:12px;
+}
+.gst-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13px}
+.gst-row span{color:var(--muted)}
+.gst-row strong{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink)}
+.gst-row.total{border-top:1.5px dashed var(--border);margin-top:6px;padding-top:10px}
+.gst-row.total span{font-weight:600;color:var(--navy);font-size:14px}
+.gst-row.total strong{font-size:15px;color:var(--navy)}
+
+/* ════ PAYMENT TOGGLE ════ */
+.toggle-wrap{display:flex;gap:10px;margin-top:2px}
+.toggle-btn{
+  flex:1;padding:10px;border:2px solid var(--border);border-radius:8px;
+  font-size:13px;font-weight:600;cursor:pointer;background:#fff;
+  transition:all .2s;letter-spacing:.3px;
+}
+.toggle-btn.paid.active{border-color:var(--green);background:var(--green);color:#fff}
+.toggle-btn.unpaid.active{border-color:var(--red);background:var(--red);color:#fff}
+.toggle-btn:not(.active):hover{border-color:var(--gold)}
+
+/* ════ BUTTONS ════ */
+.btn-primary{
+  width:100%;padding:13px;background:var(--navy);color:#fff;
+  border:none;border-radius:10px;font-family:'DM Sans',sans-serif;
+  font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.4px;
+  transition:background .2s,transform .1s;margin-top:6px;
+}
+.btn-primary:hover{background:var(--navy2)}
+.btn-primary:active{transform:scale(.98)}
+.btn-gold{
+  width:100%;padding:13px;background:var(--gold);color:var(--navy);
+  border:none;border-radius:10px;font-family:'DM Sans',sans-serif;
+  font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.4px;
+  transition:background .2s,transform .1s;margin-top:10px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-gold:hover{background:#b8922e}
+.btn-gold:active{transform:scale(.98)}
+
+/* ════ RECEIPT ════ */
+#receipt-wrap{position:relative}
+#receipt-wrap.hidden{display:none}
+#receipt{background:#fff;border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+
+.rcpt-header{background:var(--navy);padding:22px 24px 16px;position:relative;overflow:hidden}
+.rcpt-header::before{
+  content:'';position:absolute;top:-28px;right:-28px;width:110px;height:110px;
+  border-radius:50%;background:rgba(201,168,76,.12);
+}
+.rcpt-header::after{
+  content:'';position:absolute;bottom:-18px;left:-18px;width:72px;height:72px;
+  border-radius:50%;background:rgba(201,168,76,.08);
+}
+.rcpt-logo{display:flex;align-items:center;gap:11px;margin-bottom:11px}
+.rcpt-logo .mark{
+  width:44px;height:44px;background:var(--gold);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Playfair Display',serif;font-weight:900;font-size:20px;
+  color:var(--navy);flex-shrink:0;
+}
+.rcpt-logo .names h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:#fff;line-height:1}
+.rcpt-logo .names p{font-size:10.5px;color:var(--gold-light);letter-spacing:2.5px;text-transform:uppercase;margin-top:2px}
+.rcpt-meta{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px}
+.rcpt-addr{font-size:11px;color:rgba(248,244,236,.7);line-height:1.6;max-width:210px}
+.rcpt-addr a{color:rgba(248,244,236,.65);text-decoration:none}
+.rcpt-id-block{text-align:right}
+.rcpt-num{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--gold);letter-spacing:1px}
+.rcpt-date{font-size:11px;color:rgba(248,244,236,.6);margin-top:3px}
+
+.gold-bar{height:3px;background:linear-gradient(90deg,var(--gold),var(--gold-light),var(--gold))}
+
+.rcpt-body{padding:20px 24px}
+.rcpt-section-title{
+  font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:9px;padding-bottom:5px;border-bottom:1px solid var(--border);
+}
+.rcpt-customer{background:var(--cream);border-radius:10px;padding:13px 15px;margin-bottom:16px}
+.cname{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--navy);line-height:1.2}
+.cmeta{margin-top:7px;display:flex;flex-direction:column;gap:4px}
+.cmeta a{font-size:12.5px;color:var(--navy);text-decoration:none;font-weight:500;display:inline-flex;align-items:center;gap:5px}
+.cmeta a:hover{text-decoration:underline}
+.caddr{font-size:11.5px;color:var(--muted);line-height:1.5}
+
+.payment-table{width:100%;border-collapse:collapse;margin-bottom:0;font-size:12.5px}
+.payment-table th{
+  text-align:left;font-size:9px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);padding:0 0 7px;border-bottom:1px solid var(--border);
+}
+.payment-table th:nth-child(2){text-align:center;width:44px}
+.payment-table th:last-child{text-align:right}
+.payment-table td{padding:8px 0;border-bottom:1px dashed var(--border);color:var(--ink);vertical-align:middle}
+.payment-table td:nth-child(2){text-align:center;color:var(--muted);font-size:12px}
+.payment-table td:last-child{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12.5px}
+.payment-table tr.sub-row td{border-bottom:none;padding:5px 0;color:var(--muted);font-size:12px}
+.payment-table tr.sub-row td:last-child{font-family:'JetBrains Mono',monospace;font-size:12px}
+.payment-table tr.divider td{border:none;height:6px}
+.payment-table tr.total-row td{
+  border:none;border-top:2px solid var(--navy);
+  font-weight:700;font-size:14px;color:var(--navy);padding-top:10px;
+}
+.payment-table tr.total-row td:last-child{font-family:'JetBrains Mono',monospace;font-size:15px}
+
+.status-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.status-badge{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 13px;
+  border-radius:20px;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+}
+.status-badge.paid{background:rgba(45,122,79,.12);color:var(--green)}
+.status-badge.unpaid{background:rgba(184,50,50,.12);color:var(--red)}
+.status-badge .dot{width:7px;height:7px;border-radius:50%}
+.status-badge.paid .dot{background:var(--green)}
+.status-badge.unpaid .dot{background:var(--red)}
+
+.rcpt-footer{
+  border-top:1.5px solid var(--border);padding:16px 24px;
+  display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;
+}
+.sig-block{text-align:right}
+.sig-line{width:155px;height:1px;background:var(--ink);margin-bottom:5px;margin-left:auto}
+.sig-name{font-family:'Playfair Display',serif;font-size:12.5px;font-weight:700;color:var(--navy)}
+.sig-title{font-size:9.5px;color:var(--muted);letter-spacing:.5px;margin-top:1px}
+.thank-note{font-size:11.5px;color:var(--muted);line-height:1.5}
+.thank-note strong{color:var(--navy)}
+.rcpt-gold-bottom{height:6px;background:linear-gradient(90deg,var(--navy),var(--gold),var(--navy))}
+
+/* ════ EMPTY STATE ════ */
+.notice{text-align:center;padding:40px 16px;color:var(--muted);font-size:13px}
+.notice .icon{font-size:38px;margin-bottom:10px;display:block}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="logo-mark">iB</div>
+  <div class="brand">
+    <h1>iBoxWala</h1>
+    <p>Receipt Generator</p>
+  </div>
+  <div style="margin-left:auto;text-align:right;flex-shrink:0">
+    <div style="font-size:12px;color:var(--gold-light);font-weight:600">Sayyed Irfan Bandavi</div>
+    <a href="tel:+919324595892" style="font-size:11px;color:rgba(248,244,236,0.6);text-decoration:none;letter-spacing:0.5px">📞 +91 93245 95892</a>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ══ LEFT: FORM ══ -->
+  <div>
+
+    <!-- Customer Details -->
+    <div class="card">
+      <div class="card-head">
+        <div class="icon">👤</div>
+        <h2>Customer Details</h2>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Customer Name</label>
+          <input type="text" id="cname" placeholder="e.g. Rahul Sharma" />
+        </div>
+        <div class="field">
+          <label>Customer Mobile Number</label>
+          <input type="tel" id="cmobile" placeholder="e.g. 9876543210" maxlength="15" />
+          <p style="font-size:11px;color:var(--muted);margin-top:5px">📌 This is the <em>customer's</em> number — appears on receipt as a tap-to-call link.</p>
+        </div>
+        <div class="field">
+          <label>Customer Address <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px">(optional)</span></label>
+          <textarea id="caddress" placeholder="Street, Area, City – PIN"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div class="card">
+      <div class="card-head">
+        <div class="icon">📦</div>
+        <h2>Items / Products</h2>
+      </div>
+      <div class="card-body">
+        <div class="item-col-heads">
+          <span>Description</span>
+          <span>Qty</span>
+          <span>Rate (₹)</span>
+          <span></span>
+        </div>
+        <div class="items-list" id="items-list"></div>
+        <button class="btn-add-item" onclick="addItem()">＋ Add Another Item</button>
+      </div>
+    </div>
+
+    <!-- Payment Details -->
+    <div class="card">
+      <div class="card-head">
+        <div class="icon">💰</div>
+        <h2>GST &amp; Payment</h2>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>GST Rate</label>
+          <select id="gstRate" onchange="calcTotals()">
+            <option value="0">0% – No GST</option>
+            <option value="5">5%</option>
+            <option value="12">12%</option>
+            <option value="18" selected>18%</option>
+            <option value="28">28%</option>
+          </select>
+        </div>
+        <div class="gst-strip">
+          <div class="gst-row">
+            <span>Subtotal (before GST)</span>
+            <strong id="disp-sub">₹ 0.00</strong>
+          </div>
+          <div class="gst-row">
+            <span>GST (<span id="disp-gst-pct">18</span>%)</span>
+            <strong id="disp-gst">₹ 0.00</strong>
+          </div>
+          <div class="gst-row total">
+            <span>Total Payable</span>
+            <strong id="disp-total">₹ 0.00</strong>
+          </div>
+        </div>
+        <div class="field" style="margin-top:16px">
+          <label>Payment Status</label>
+          <div class="toggle-wrap">
+            <button class="toggle-btn paid active" id="btn-paid"   onclick="setStatus('paid')">✔ Paid</button>
+            <button class="toggle-btn unpaid"      id="btn-unpaid" onclick="setStatus('unpaid')">✘ Unpaid</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="generateReceipt()">⚡ Generate Receipt</button>
+    <button class="btn-gold"    onclick="downloadPDF()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download PDF
+    </button>
+
+  </div><!-- /left -->
+
+  <!-- ══ RIGHT: RECEIPT PREVIEW ══ -->
+  <div id="receipt-wrap" class="hidden">
+    <div id="receipt">
+
+      <div class="rcpt-header">
+        <div class="rcpt-logo">
+          <div class="mark">iB</div>
+          <div class="names">
+            <h2>iBoxWala</h2>
+            <p>Carton Solutions</p>
+          </div>
+        </div>
+        <div class="rcpt-meta">
+          <div class="rcpt-addr">
+            Shop No. 5, Sai Krupa Complex,<br>
+            Kandivali (W), Mumbai – 400 067<br>
+            Owner: <strong style="color:rgba(248,244,236,0.9)">Sayyed Irfan Bandavi</strong><br>
+            📞 <a href="tel:+919324595892" style="color:var(--gold-light);font-weight:600">+91 93245 95892</a>
+          </div>
+          <div class="rcpt-id-block">
+            <div class="rcpt-num" id="r-num">IBX-20240101-001</div>
+            <div class="rcpt-date" id="r-date">01 Jan 2024</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gold-bar"></div>
+
+      <div class="rcpt-body">
+
+        <div class="rcpt-section-title">Bill To</div>
+        <div class="rcpt-customer">
+          <div class="cname" id="r-name">Customer Name</div>
+          <div class="cmeta">
+            <a id="r-phone" href="tel:+910000000000">📱 Customer: +91 0000000000</a>
+            <div class="caddr" id="r-addr"></div>
+          </div>
+        </div>
+
+        <div class="status-row">
+          <div class="rcpt-section-title" style="margin-bottom:0;padding-bottom:0;border:none">Payment Summary</div>
+          <span class="status-badge paid" id="r-status"><span class="dot"></span> Paid</span>
+        </div>
+
+        <table class="payment-table">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody id="r-items-body"></tbody>
+          <tfoot id="r-items-foot"></tfoot>
+        </table>
+
+      </div>
+
+      <div class="rcpt-footer">
+        <div class="thank-note">
+          Thank you for your business!<br>
+          <strong>iBoxWala</strong> — Reliable Cartons for Safe Shipping.
+        </div>
+        <div class="sig-block">
+          <div class="sig-line"></div>
+          <div class="sig-name">Sayyed Irfan Bandavi</div>
+          <div class="sig-title">Authorized Signatory · iBoxWala</div>
+        </div>
+      </div>
+
+      <div class="rcpt-gold-bottom"></div>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div id="empty-state">
+    <div class="notice">
+      <span class="icon">🧾</span>
+      Fill in the details on the left and click<br>
+      <strong>Generate Receipt</strong> to preview it here.
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+/* ════ STATE ════ */
+let payStatus = 'paid';
+let itemCounter = 0;
+
+/* ════ INIT ════ */
+window.addEventListener('DOMContentLoaded', function() {
+  addItem('Carton / Packaging Products', 1, '');
+  calcTotals();
+});
+
+/* ════ ADD ITEM ROW ════ */
+function addItem(desc, qty, rate) {
+  desc = desc !== undefined ? desc : '';
+  qty  = qty  !== undefined ? qty  : 1;
+  rate = rate !== undefined ? rate : '';
+
+  itemCounter++;
+  var id  = 'item-' + itemCounter;
+  var row = document.createElement('div');
+  row.className = 'item-row';
+  row.id = id;
+  row.innerHTML =
+    '<input type="text"   class="i-desc" placeholder="Item description" value="' + escAttr(desc) + '" oninput="calcTotals()" />' +
+    '<input type="number" class="i-qty"  placeholder="1"    min="1" step="1"    value="' + qty  + '" oninput="calcTotals()" />' +
+    '<input type="number" class="i-rate" placeholder="0.00" min="0" step="0.01" value="' + rate + '" oninput="calcTotals()" />' +
+    '<button class="del-btn" onclick="removeItem(\'' + id + '\')" title="Remove">&#215;</button>';
+  document.getElementById('items-list').appendChild(row);
+  calcTotals();
+}
+
+/* ════ REMOVE ITEM ROW ════ */
+function removeItem(id) {
+  var list = document.getElementById('items-list');
+  if (list.children.length <= 1) {
+    alert('At least one item is required.');
+    return;
+  }
+  var el = document.getElementById(id);
+  if (el) el.remove();
+  calcTotals();
+}
+
+/* ════ READ ALL ITEMS ════ */
+function getItems() {
+  var rows = document.querySelectorAll('.item-row');
+  var items = [];
+  rows.forEach(function(row) {
+    items.push({
+      desc: row.querySelector('.i-desc').value.trim() || 'Item',
+      qty:  parseFloat(row.querySelector('.i-qty').value)  || 1,
+      rate: parseFloat(row.querySelector('.i-rate').value) || 0
+    });
+  });
+  return items;
+}
+
+/* ════ LIVE TOTALS ════ */
+function calcTotals() {
+  var items    = getItems();
+  var subtotal = items.reduce(function(s, i) { return s + i.qty * i.rate; }, 0);
+  var gstRate  = parseFloat(document.getElementById('gstRate').value) || 0;
+  var gstAmt   = subtotal * gstRate / 100;
+  var total    = subtotal + gstAmt;
+
+  document.getElementById('disp-sub').textContent     = fmt(subtotal);
+  document.getElementById('disp-gst').textContent     = fmt(gstAmt);
+  document.getElementById('disp-total').textContent   = fmt(total);
+  document.getElementById('disp-gst-pct').textContent = gstRate;
+}
+
+/* ════ PAYMENT STATUS ════ */
+function setStatus(s) {
+  payStatus = s;
+  document.getElementById('btn-paid').classList.toggle('active',   s === 'paid');
+  document.getElementById('btn-unpaid').classList.toggle('active', s === 'unpaid');
+}
+
+/* ════ RECEIPT NUMBER & DATE ════ */
+function genReceiptNum() {
+  var d   = new Date();
+  var ymd = d.getFullYear() +
+            String(d.getMonth()+1).padStart(2,'0') +
+            String(d.getDate()).padStart(2,'0');
+  var seq = String(Math.floor(Math.random()*900)+100);
+  return 'IBX-' + ymd + '-' + seq;
+}
+function fmtDate(d) {
+  return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+/* ════ GENERATE RECEIPT ════ */
+function generateReceipt() {
+  var name    = document.getElementById('cname').value.trim();
+  var mobile  = document.getElementById('cmobile').value.trim();
+  var addr    = document.getElementById('caddress').value.trim();
+  var items   = getItems();
+  var gstRate = parseFloat(document.getElementById('gstRate').value) || 0;
+  var subtotal = items.reduce(function(s,i){ return s + i.qty * i.rate; }, 0);
+
+  if (!name)        { alert('Please enter the customer name.');   return; }
+  if (!mobile)      { alert('Please enter the mobile number.');   return; }
+  if (subtotal <= 0){ alert('Please enter at least one item with a valid rate.'); return; }
+
+  var gstAmt = subtotal * gstRate / 100;
+  var total  = subtotal + gstAmt;
+
+  /* Header fields */
+  document.getElementById('r-num').textContent  = genReceiptNum();
+  document.getElementById('r-date').textContent = fmtDate(new Date());
+
+  /* Customer */
+  document.getElementById('r-name').textContent = name;
+  var cleanMobile = mobile.replace(/\D/g,'');
+  var ph = document.getElementById('r-phone');
+  ph.href        = 'tel:+91' + cleanMobile;
+  ph.textContent = '📱 Customer: +91 ' + cleanMobile;
+  var addrEl = document.getElementById('r-addr');
+  addrEl.textContent = addr || '';
+  addrEl.style.display = addr ? 'block' : 'none';
+
+  /* Items body */
+  var tbody = document.getElementById('r-items-body');
+  tbody.innerHTML = '';
+  items.forEach(function(item) {
+    var amount = item.qty * item.rate;
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + escHtml(item.desc) + '</td>' +
+      '<td>' + item.qty + '</td>' +
+      '<td>' + fmt(amount) + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  /* Totals foot */
+  var tfoot = document.getElementById('r-items-foot');
+  tfoot.innerHTML =
+    '<tr class="divider"><td colspan="3"></td></tr>' +
+    '<tr class="sub-row"><td colspan="2">Subtotal</td><td>' + fmt(subtotal) + '</td></tr>' +
+    '<tr class="sub-row"><td colspan="2">GST @ ' + gstRate + '%</td><td>' + fmt(gstAmt) + '</td></tr>' +
+    '<tr class="total-row"><td colspan="2">Total Payable</td><td>' + fmt(total) + '</td></tr>';
+
+  /* Status badge */
+  var badge = document.getElementById('r-status');
+  badge.className = 'status-badge ' + payStatus;
+  badge.innerHTML = '<span class="dot"></span> ' + (payStatus === 'paid' ? 'Paid' : 'Unpaid');
+
+  /* Show */
+  document.getElementById('receipt-wrap').classList.remove('hidden');
+  document.getElementById('empty-state').style.display = 'none';
+
+  if (window.innerWidth < 740) {
+    setTimeout(function(){
+      document.getElementById('receipt-wrap').scrollIntoView({ behavior:'smooth', block:'start' });
+    }, 120);
+  }
+}
+
+/* ════ DOWNLOAD PDF ════ */
+function downloadPDF() {
+  if (document.getElementById('receipt-wrap').classList.contains('hidden')) {
+    alert('Please generate a receipt first.');
+    return;
+  }
+
+  var name = document.getElementById('r-name').textContent.replace(/\s+/g,'_');
+  var num  = document.getElementById('r-num').textContent;
+
+  /* Clone the receipt into an off-screen div so we can safely
+     strip styles that break html2canvas (overflow:hidden, border-radius,
+     box-shadow, CSS variables) without touching the visible preview.      */
+  var original = document.getElementById('receipt');
+  var clone    = original.cloneNode(true);
+
+  /* Wrapper that positions the clone off-screen */
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = [
+    'position:fixed',
+    'left:-9999px',
+    'top:0',
+    'width:' + original.offsetWidth + 'px',
+    'background:#ffffff',
+    'z-index:-1'
+  ].join(';');
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+
+  /* Strip properties that cause blank / clipped output */
+  clone.style.overflow     = 'visible';
+  clone.style.borderRadius = '0';
+  clone.style.boxShadow    = 'none';
+
+  /* Also fix any child element with overflow:hidden or border-radius */
+  var allChildren = clone.querySelectorAll('*');
+  allChildren.forEach(function(el) {
+    var cs = window.getComputedStyle(el);
+    if (cs.overflow === 'hidden') el.style.overflow = 'visible';
+    if (cs.borderRadius && cs.borderRadius !== '0px') el.style.borderRadius = '4px';
+  });
+
+  /* Replace CSS variable colours with hard-coded values for html2canvas */
+  var style = document.createElement('style');
+  style.textContent = [
+    '.rcpt-header{background:#1a2340 !important}',
+    '.gold-bar{background:#c9a84c !important}',
+    '.rcpt-gold-bottom{background:#c9a84c !important}',
+    '.rcpt-customer{background:#f8f4ec !important}',
+    '.gst-strip{background:#f8f4ec !important}',
+    '.rcpt-logo .mark{background:#c9a84c !important;color:#1a2340 !important}',
+    '.rcpt-num{color:#c9a84c !important}',
+    '.status-badge.paid{background:rgba(45,122,79,.12) !important;color:#2d7a4f !important}',
+    '.status-badge.unpaid{background:rgba(184,50,50,.12) !important;color:#b83232 !important}',
+    '.status-badge.paid .dot{background:#2d7a4f !important}',
+    '.status-badge.unpaid .dot{background:#b83232 !important}',
+    '.payment-table tr.total-row td{color:#1a2340 !important;border-top:2px solid #1a2340 !important}'
+  ].join('');
+  clone.appendChild(style);
+
+  html2pdf().set({
+    margin:      [6, 6, 6, 6],
+    filename:    'iBoxWala_Receipt_' + name + '_' + num + '.pdf',
+    image:       { type:'jpeg', quality:0.98 },
+    html2canvas: {
+      scale:          2,
+      useCORS:        true,
+      letterRendering:true,
+      backgroundColor:'#ffffff',
+      logging:        false,
+      removeContainer:true
+    },
+    jsPDF: { unit:'mm', format:'a5', orientation:'portrait' }
+  })
+  .from(clone)
+  .save()
+  .then(function() {
+    document.body.removeChild(wrapper);
+  })
+  .catch(function(err) {
+    document.body.removeChild(wrapper);
+    console.error('PDF error:', err);
+    alert('PDF generation failed. Please try again.');
+  });
+}
+
+/* ════ HELPERS ════ */
+function fmt(n) {
+  return '₹ ' + n.toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>
